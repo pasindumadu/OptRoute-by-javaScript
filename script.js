@@ -1,8 +1,11 @@
+let selectedPoint = null;
+
 function calculateDistance(bridgeX, A_x, A_y, B_x, B_y, riverWidth) {
-    const distAtoBridge = Math.sqrt((A_x - bridgeX) ** 2 + (A_y - 0) ** 2);
-    const distBridgetoB = Math.sqrt((B_x - bridgeX) ** 2 + (B_y - riverWidth) ** 2);
-    const totalDistance = distAtoBridge + riverWidth + distBridgetoB;
-    return { distAtoBridge, distBridgetoB, totalDistance };
+    // Path connects: A → bridge_start (y=0) → bridge_end (y=riverWidth) → B
+    const distAtoBridgeStart = Math.sqrt((A_x - bridgeX) ** 2 + (A_y - 0) ** 2);
+    const distBridgeEndToB = Math.sqrt((B_x - bridgeX) ** 2 + (B_y - riverWidth) ** 2);
+    const totalDistance = distAtoBridgeStart + riverWidth + distBridgeEndToB;
+    return { distAtoBridgeStart, distBridgeEndToB, totalDistance };
 }
 
 function updatePlot() {
@@ -13,39 +16,93 @@ function updatePlot() {
     const riverWidth = parseFloat(document.getElementById('river_width').value);
     const bridgeX = parseFloat(document.getElementById('bridge_x').value);
 
-    const { distAtoBridge, distBridgetoB, totalDistance } = calculateDistance(bridgeX, A_x, A_y, B_x, B_y, riverWidth);
+    const { distAtoBridgeStart, distBridgeEndToB, totalDistance } = calculateDistance(bridgeX, A_x, A_y, B_x, B_y, riverWidth);
 
+    // Plotly data configuration
     const data = [
+        // City A marker (draggable)
         {
-            x: [A_x, bridgeX, B_x],
-            y: [A_y, 0, B_y],
-            mode: 'lines+markers',
-            name: 'Path',
-            line: { color: 'orange', dash: 'dash' }
+            x: [A_x],
+            y: [A_y],
+            mode: 'markers',
+            name: 'City A',
+            marker: { size: 12, color: 'red' },
+            hoverinfo: 'none',
+            drag: 'none'
         },
+        // City B marker (draggable)
+        {
+            x: [B_x],
+            y: [B_y],
+            mode: 'markers',
+            name: 'City B',
+            marker: { size: 12, color: 'green' },
+            hoverinfo: 'none',
+            drag: 'none'
+        },
+        // Bridge (vertical line)
         {
             x: [bridgeX, bridgeX],
             y: [0, riverWidth],
             mode: 'lines',
             name: 'Bridge',
-            line: { color: 'brown', width: 4 }
+            line: { color: 'brown', width: 4 },
+            hoverinfo: 'none'
+        },
+        // Path A → Bridge Start
+        {
+            x: [A_x, bridgeX],
+            y: [A_y, 0],
+            mode: 'lines',
+            name: 'A → Bridge',
+            line: { color: 'orange', dash: 'dash' }
+        },
+        // Path Bridge End → B
+        {
+            x: [bridgeX, B_x],
+            y: [riverWidth, B_y],
+            mode: 'lines',
+            name: 'Bridge → B',
+            line: { color: 'purple', dash: 'dash' }
         }
     ];
 
     const layout = {
-        title: 'Bridge Placement and Travel Path',
-        xaxis: { title: 'X Coordinate (km)', range: [-1, 7] },
-        yaxis: { title: 'Y Coordinate (km)', range: [-4, 8] },
-        showlegend: true
+        title: 'Bridge Optimization Simulator',
+        xaxis: { range: [-1, 7] },
+        yaxis: { range: [-4, 8] },
+        dragmode: false,
+        hovermode: 'closest'
     };
 
-    Plotly.newPlot('plot', data, layout);
+    Plotly.react('plot', data, layout);
 
-    // Display distances
-    console.log(`Distance A → Bridge: ${distAtoBridge.toFixed(4)} km`);
-    console.log(`Distance Bridge → B: ${distBridgetoB.toFixed(4)} km`);
-    console.log(`Total Distance: ${totalDistance.toFixed(4)} km`);
+    // Attach drag handlers after initial render
+    document.getElementById('plot').on('plotly_click', (data) => {
+        selectedPoint = data.points[0].curveNumber;
+    });
+
+    document.getElementById('plot').on('plotly_relayout', (eventData) => {
+        if (selectedPoint !== null) {
+            const newX = eventData['xaxis.range[0]'];
+            const newY = eventData['yaxis.range[0]'];
+            
+            // Update coordinates based on dragged point
+            switch(selectedPoint) {
+                case 0: // City A
+                    document.getElementById('A_x').value = newX.toFixed(2);
+                    document.getElementById('A_y').value = newY.toFixed(2);
+                    break;
+                case 1: // City B
+                    document.getElementById('B_x').value = newX.toFixed(2);
+                    document.getElementById('B_y').value = newY.toFixed(2);
+                    break;
+            }
+            updatePlot();
+        }
+        selectedPoint = null;
+    });
 }
 
-// Initial plot
+// Initialize the plot
 updatePlot();
