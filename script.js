@@ -28,7 +28,6 @@ function findOptimalBridge(A_x, A_y, B_x, B_y, riverWidth) {
 }
 
 function updatePlot() {
-    // Get input values
     const A_x = parseFloat(document.getElementById('A_x').value);
     const A_y = parseFloat(document.getElementById('A_y').value);
     const B_x = parseFloat(document.getElementById('B_x').value);
@@ -36,14 +35,11 @@ function updatePlot() {
     const riverWidth = parseFloat(document.getElementById('river_width').value);
     const bridgeX = parseFloat(document.getElementById('bridge_x').value);
 
-    // Calculate distances
     const currentDist = calculateDistance(bridgeX, A_x, A_y, B_x, B_y, riverWidth);
     const optimalX = findOptimalBridge(A_x, A_y, B_x, B_y, riverWidth);
     const optimalDist = calculateDistance(optimalX, A_x, A_y, B_x, B_y, riverWidth);
 
-    // Create Plotly traces
     const traces = [
-        // Current paths
         {
             x: [A_x, bridgeX], y: [A_y, 0],
             mode: 'lines+markers', name: 'Current A → Bridge',
@@ -54,7 +50,6 @@ function updatePlot() {
             mode: 'lines+markers', name: 'Current Bridge → B',
             line: {color: 'purple', dash: 'dash'}
         },
-        // Optimal paths
         {
             x: [A_x, optimalX], y: [A_y, 0],
             mode: 'lines', name: 'Optimal A → Bridge',
@@ -65,15 +60,13 @@ function updatePlot() {
             mode: 'lines', name: 'Optimal Bridge → B',
             line: {color: 'blue', width: 1.5}
         },
-        // Bridge
         {
             x: [bridgeX, bridgeX], y: [0, riverWidth],
             mode: 'lines', name: 'Bridge',
             line: {color: 'brown', width: 4}
         },
-        // Optimal bridge indicator
         {
-            x: [optimalX], y: [riverWidth/2],
+            x: [optimalX], y: [riverWidth / 2],
             mode: 'markers+text', text: [`Optimal: ${optimalX.toFixed(2)}`],
             marker: {size: 12, color: 'blue'},
             textposition: 'bottom center',
@@ -81,27 +74,26 @@ function updatePlot() {
         }
     ];
 
-    // Update layout
     const layout = {
-        title: 'Bridge Optimization Simulator',
+        title: { text: 'Bridge Optimization Simulator', font: { size: window.innerWidth < 600 ? 16 : 24 } },
         xaxis: {range: [-1, 7]},
         yaxis: {range: [-4, 8]},
         showlegend: true,
         annotations: [
             {
-                x: (A_x + bridgeX)/2, y: A_y/2,
+                x: (A_x + bridgeX) / 2, y: A_y / 2,
                 text: `Current: ${currentDist.distAtoBridge.toFixed(2)} km`,
                 showarrow: false,
                 font: {color: 'orange'}
             },
             {
-                x: (bridgeX + B_x)/2, y: (riverWidth + B_y)/2,
+                x: (bridgeX + B_x) / 2, y: (riverWidth + B_y) / 2,
                 text: `Current: ${currentDist.distBridgeToB.toFixed(2)} km`,
                 showarrow: false,
                 font: {color: 'purple'}
             },
             {
-                x: optimalX, y: riverWidth/2,
+                x: optimalX, y: riverWidth / 2,
                 text: `Optimal Total: ${optimalDist.totalDistance.toFixed(2)} km`,
                 showarrow: true,
                 arrowhead: 4,
@@ -115,29 +107,13 @@ function updatePlot() {
     Plotly.react('plot', traces, layout);
 }
 
-// Initialize drag-and-drop functionality
-document.getElementById('plot').on('plotly_click', (data) => {
-    selectedPoint = data.points[0].curveNumber;
-});
-
 document.getElementById('plot').on('plotly_relayout', (eventData) => {
     if (selectedPoint !== null) {
-        const newX = eventData['xaxis.range[0]'];
-        const newY = eventData['yaxis.range[0]'];
-        
-        if(selectedPoint === 0) { // City A
-            document.getElementById('A_x').value = newX.toFixed(2);
-            document.getElementById('A_y').value = newY.toFixed(2);
-        } 
-        else if(selectedPoint === 1) { // City B
-            document.getElementById('B_x').value = newX.toFixed(2);
-            document.getElementById('B_y').value = newY.toFixed(2);
-        }
-        
+        const newX = eventData['xaxis.range[0]'] || parseFloat(document.getElementById('bridge_x').value);
+        document.getElementById('bridge_x').value = newX.toFixed(2);
         updatePlot();
     }
     selectedPoint = null;
 });
 
-// Initialize the plot
 updatePlot();
